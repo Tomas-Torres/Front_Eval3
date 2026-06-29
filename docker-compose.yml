@@ -1,0 +1,107 @@
+# docker-compose.yml
+#
+# Levanta el entorno de desarrollo LOCAL completo:
+#   - frontend (este repo)
+#   - backend-usuarios (Node.js)   -> repo backJs_Eval3
+#   - backend-productos (Python)   -> repo BackPy_Eval3
+#   - mysql (una sola instancia, con 2 bases de datos)
+#
+# IMPORTANTE: este archivo asume que los 3 repos están clonados como
+# carpetas hermanas:
+#
+#   proyecto/
+#   ├── docker-compose.yml   <- este archivo
+#   ├── frontend/            <- este repo (Front_Eval3)
+#   ├── backJs_Eval3/        <- backend de usuarios (Node.js)
+#   └── BackPy_Eval3/        <- backend de productos (Python/Flask)
+#
+# Si tus compañeros aún no tienen su Dockerfile listo, puedes comentar
+# esos 2 servicios y dejar solo "frontend" + "mysql" para probar la UI.
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: users_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-usuarios:
+    build:
+      context: ../backJs_Eval3
+    container_name: backend_usuarios
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root_password
+      DB_NAME: users_db
+      PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  backend-productos:
+    build:
+      context: ../BackPy_Eval3
+    container_name: backend_productos
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: root_password
+      DB_NAME: products_db
+      PORT: 8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend_app
+    restart: unless-stopped
+    environment:
+      # Dentro de la red de Docker, el navegador del usuario sigue corriendo
+      # en su máquina (no dentro de la red de contenedores), así que el
+      # frontend debe apuntar a localhost:PUERTO, no al nombre del servicio.
+      BACKEND_USERS_URL: http://localhost:8081
+      BACKEND_PRODUCTS_URL: http://localhost:8082
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend-usuarios
+      - backend-productos
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:

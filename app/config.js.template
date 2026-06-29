@@ -1,0 +1,8 @@
+// Este archivo es una PLANTILLA. No se sirve directamente.
+// docker-entrypoint.sh reemplaza ${BACKEND_USERS_URL} y ${BACKEND_PRODUCTS_URL}
+// con los valores reales de las variables de entorno del contenedor,
+// y el resultado se escribe como /usr/share/nginx/html/config.js
+window.APP_CONFIG = {
+    BACKEND_USERS_URL: "${BACKEND_USERS_URL}",
+    BACKEND_PRODUCTS_URL: "${BACKEND_PRODUCTS_URL}"
+};

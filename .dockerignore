@@ -1,0 +1,10 @@
+# No copiar nada que no sea necesario en la imagen
+.git
+.gitignore
+*.md
+node_modules
+target/
+*.class
+.env
+.env.*
+docker-compose*.yml
